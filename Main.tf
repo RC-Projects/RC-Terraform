@@ -15,30 +15,49 @@ resource "aws_instance" "Eg_Deploy" {
     delete_on_termination = true
   }
   #Instance Name
-  tags = { Name = "TF_init" }
+  tags = { Name = "Web_Server" }
   #Security group plus SSH key
   security_groups = ["admin-group1"]
   connection {
     type        = "ssh"
-    user        = "ec2-user"               // for AWS Linux
-    private_key = file("~/.ssh/myKey.pem") // your key here
+    user        = "ec2-user" // ec2-user for AWS Linux | ubuntu for Ubuntu
+    private_key = file("~/.ssh/admin-aws.pem")
     host        = self.public_ip
   }
 
-  #Run init shell commands / software updates and installs
+  #Run updates and installs web server packages 
   provisioner "remote-exec" {
     inline = [
       "sudo yum update -y",
       "sudo yum install htop -y",
       "sudo mkdir /software",
-      "sudo chown ec2-user:ec2-user /software"
+      "sudo chown ec2-user:ec2-user /software",
+      #"sudo yum install golang.x86_64 -y",
+      "sudo amazon-linux-extras install -y php7.2",
+      "sudo yum install httpd -y",
+      "sudo systemctl start httpd",
+      "sudo systemctl enable httpd",
+      "sudo touch /var/www/html/index.html" // Replace with content
     ]
   }
 
-  #Push File to Server
+  #Push test script to server
   provisioner "file" {
     source      = "PushMe.sh"
     destination = "/software/PushMe.sh"
+  }
+
+  #Push logo to server
+  provisioner "file" {
+    source      = "push/logo.png"
+    destination = "/software/logo.png"
+  }
+
+  #Push index page
+  provisioner "file" {
+    source      = "push/index.html"
+    destination = "/software/index"
+
   }
 
   #Append data to log
@@ -47,14 +66,30 @@ resource "aws_instance" "Eg_Deploy" {
     destination = "/software/file.log"
   }
 
-  #Update file permisions 
+  #Update file permisions and move filse to web directory
   provisioner "remote-exec" {
-    inline = ["sudo chmod 740 /software/PushMe.sh"]
+    inline = ["sudo chmod 740 /software/PushMe.sh",
+      "sudo sed -i -e 's/\r$//' /softare/PushMe.sh", // Purge any bad windows formatting. 
+      "sudo mv /software/logo.png /var/www/html/logo.png"
+    ]
   }
-  #End of main code
 }
+#### End of main code ####
+
+
+#Assign EIP
+resource "aws_eip" "vpn" {
+  vpc      = true
+  instance = "${aws_instance.Eg_Deploy.id}"
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 
 #Print Public DNS on Finish
 output "public_dns" {
   value = "${aws_instance.Eg_Deploy.public_dns}"
 }
+
+

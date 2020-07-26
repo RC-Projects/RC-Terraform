@@ -6,8 +6,8 @@
 run_dock() {
 
 echo "Starting docker image build..."
-  ## This will captuire <Successfully built [ID]> from a sucessful docker build.
-docker build . | grep "Successfully built" > tmp.txt  | echo "Image ID:"
+  ## Captures <Successfully built [ID]> from a sucessful docker build.
+docker build --tag mule:1.0 . | grep "Successfully built" > tmp.txt  | echo "Image ID:"
  ## Removes any unnessary text from the ID that we want.
 sed -i 's/\<Successfully built\>//g' tmp.txt
 cont_id=$(cat tmp.txt)

@@ -1,4 +1,3 @@
-### Run || terraform.exe import aws_eip.vpn eipalloc-0d1e982bc16fa4b10 || before Terraform apply to maintain EIP. 
 #Main TF Script
 
 provider "aws" {
